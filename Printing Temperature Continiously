@@ -1,0 +1,53 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+// OLED display width and height
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+
+// Initialize the OLED display (I2C address explicitly provided)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// Variables for temperature
+float temperature = 0.0; // Variable to store temperature
+
+void setup() {
+  // Initialize serial communication for debugging
+  Serial.begin(115200);
+
+  // Initialize the OLED display
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    while (1);
+  }
+
+  // Clear the display buffer
+  display.clearDisplay();
+  display.setTextSize(1);  // Set text size
+  display.setTextColor(SSD1306_WHITE);
+}
+
+void loop() {
+  // Generate a random temperature between -50 and 95
+  temperature = random(-50, 96) + random(0, 10) / 10.0; // Adds a decimal for realism
+
+  // Clear the display buffer
+  display.clearDisplay();
+
+  // Display temperature
+  display.setCursor(0, 10);
+  display.print("Temp: ");
+  display.print(temperature, 1); // Display one decimal point
+  display.print(" C");
+
+  // Show the content on the display
+  display.display();
+
+  // Print the temperature to Serial for debugging
+  Serial.print("Temperature: ");
+  Serial.println(temperature);
+
+  // Wait for a second before updating
+  delay(1000);
+}
