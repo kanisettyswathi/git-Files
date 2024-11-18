@@ -1,0 +1,158 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <math.h> // For trigonometric functions
+
+// OLED display width and height
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 32
+
+// Initialize the OLED display (I2C address explicitly provided)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// Initial time variables (set time to 16:04:00)
+int seconds = 0;
+int minutes = 4;
+int hours = 16;
+
+// Today's date
+const char* dateString = "18:11:2024"; // DD:MM:YYYY format
+
+// Function to draw the clock face (ring and markers)
+void drawClockFace() {
+  int centerX = SCREEN_WIDTH / 2;
+  int centerY = SCREEN_HEIGHT / 2 + 4; // Shift down slightly for digital time
+  int radius = 14; // Radius of the clock face
+
+  // Draw the ring
+  display.drawCircle(centerX, centerY, radius, SSD1306_WHITE);
+
+  // Draw hour markers (12 positions)
+  for (int i = 0; i < 12; i++) {
+    float angle = i * 30 * (PI / 180); // 30 degrees per hour, converted to radians
+    int x1 = centerX + (radius - 2) * cos(angle - PI / 2);
+    int y1 = centerY + (radius - 2) * sin(angle - PI / 2);
+    int x2 = centerX + radius * cos(angle - PI / 2);
+    int y2 = centerY + radius * sin(angle - PI / 2);
+    display.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+  }
+}
+
+// Function to draw the hour needle
+void drawHourNeedle(int hour, int minute) {
+  int centerX = SCREEN_WIDTH / 2;
+  int centerY = SCREEN_HEIGHT / 2 + 4; // Match clock face position
+  float angle = (hour % 12 + minute / 60.0) * 30 * (PI / 180); // Hour angle
+  int needleLength = 6; // Shorter for hours
+  int endX = centerX + needleLength * cos(angle - PI / 2);
+  int endY = centerY + needleLength * sin(angle - PI / 2);
+  display.drawLine(centerX, centerY, endX, endY, SSD1306_WHITE);
+  display.drawPixel(endX, endY, SSD1306_WHITE); // Thicker appearance
+}
+
+// Function to draw the minute needle
+void drawMinuteNeedle(int minute, int second) {
+  int centerX = SCREEN_WIDTH / 2;
+  int centerY = SCREEN_HEIGHT / 2 + 4; // Match clock face position
+  float angle = (minute + second / 60.0) * 6 * (PI / 180); // Minute angle
+  int needleLength = 10; // Medium length
+  int endX = centerX + needleLength * cos(angle - PI / 2);
+  int endY = centerY + needleLength * sin(angle - PI / 2);
+  display.drawLine(centerX, centerY, endX, endY, SSD1306_WHITE);
+}
+
+// Function to draw the second needle
+void drawSecondNeedle(int second) {
+  int centerX = SCREEN_WIDTH / 2;
+  int centerY = SCREEN_HEIGHT / 2 + 4; // Match clock face position
+  float angle = second * 6 * (PI / 180); // Second angle
+  int needleLength = 12; // Longest needle
+  int endX = centerX + needleLength * cos(angle - PI / 2);
+  int endY = centerY + needleLength * sin(angle - PI / 2);
+  display.drawLine(centerX, centerY, endX, endY, SSD1306_WHITE);
+}
+
+// Function to display digital time at the bottom of the screen
+void displayDigitalTime() {
+  display.setCursor(0, SCREEN_HEIGHT - 8); // Position at the bottom
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  // Format the time as HH:MM:SS
+  if (hours < 10) display.print("0"); // Leading zero for hours
+  display.print(hours);
+  display.print(":");
+  if (minutes < 10) display.print("0"); // Leading zero for minutes
+  display.print(minutes);
+  display.print(":");
+  if (seconds < 10) display.print("0"); // Leading zero for seconds
+  display.print(seconds);
+}
+
+// Function to display the date at the top-left corner
+void displayDate() {
+  display.setCursor(0, 0); // Position at the top-left corner
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.print(dateString); // Print the date string
+}
+
+void setup() {
+  // Initialize serial communication for debugging
+  Serial.begin(115200);
+
+  // Initialize the OLED display
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    while (1);
+  }
+
+  // Clear the display buffer
+  display.clearDisplay();
+  display.setTextSize(1);  // Small text size
+  display.setTextColor(SSD1306_WHITE);
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+
+  // Update the time every second
+  static unsigned long lastUpdate = 0;
+  if (currentMillis - lastUpdate >= 1000) {
+    lastUpdate = currentMillis;
+
+    // Increment the time
+    seconds++;
+    if (seconds == 60) {
+      seconds = 0;
+      minutes++;
+      if (minutes == 60) {
+        minutes = 0;
+        hours++;
+        if (hours == 24) {
+          hours = 0;
+        }
+      }
+    }
+  }
+
+  // Clear the display buffer
+  display.clearDisplay();
+
+  // Display the date
+  displayDate();
+
+  // Display digital time
+  displayDigitalTime();
+
+  // Draw the clock face
+  drawClockFace();
+
+  // Draw the needles
+  drawHourNeedle(hours, minutes);
+  drawMinuteNeedle(minutes, seconds);
+  drawSecondNeedle(seconds);
+
+  // Display the content on the screen
+  display.display();
+}
